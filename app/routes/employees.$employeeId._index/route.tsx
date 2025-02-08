@@ -1,18 +1,29 @@
+import { Container, Paper, Typography, Box, Button } from "@mui/material";
+
 export async function loader() {
   return {}
 }
 
 export default function EmployeePage() {
   return (
-    <div>
-      <div>
-        To implement
-      </div>
-      <ul>
-        <li><a href="/employees">Employees</a></li>
-        <li><a href="/employees/new">New Employee</a></li>
-        <li><a href="/timesheets/">Timesheets</a></li>
-      </ul>
-    </div>
-  )
+    <Container maxWidth="sm">
+      <Paper elevation={3} sx={{ p: 4, mt: 4, textAlign: "center" }}>
+        <Typography variant="h5" gutterBottom>
+          To implement
+        </Typography>
+
+        <Box mt={3} display="flex" flexDirection="column" gap={2}>
+          <Button variant="contained" href="/employees">
+            Employees
+          </Button>
+          <Button variant="outlined" href="/employees/new">
+            New Employee
+          </Button>
+          <Button variant="outlined" href="/timesheets/">
+            Timesheets
+          </Button>
+        </Box>
+      </Paper>
+    </Container>
+  );
 }

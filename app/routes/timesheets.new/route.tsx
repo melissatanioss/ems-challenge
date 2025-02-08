@@ -1,5 +1,16 @@
 import { useLoaderData, Form, redirect } from "react-router";
 import { getDB } from "~/db/getDB";
+import { useState } from "react";
+import {
+  Box,
+  Button,
+  Container,
+  MenuItem,
+  Paper,
+  Select,
+  TextField,
+  Typography,
+} from "@mui/material";
 
 export async function loader() {
   const db = await getDB();
@@ -26,28 +37,67 @@ export const action: ActionFunction = async ({ request }) => {
 
 export default function NewTimesheetPage() {
   const { employees } = useLoaderData(); // Used to create a select input
+  const [employeeId, setEmployeeId] = useState("");
+
   return (
-    <div>
-      <h1>Create New Timesheet</h1>
-      <Form method="post">
-        <div>
-          {/* Use employees to create a select input */}
-        </div>
-        <div>
-          <label htmlFor="start_time">Start Time</label>
-          <input type="datetime-local" name="start_time" id="start_time" required />
-        </div>
-        <div>
-          <label htmlFor="end_time">End Time</label>
-          <input type="datetime-local" name="end_time" id="end_time" required />
-        </div>
-        <button type="submit">Create Timesheet</button>
-      </Form>
-      <hr />
-      <ul>
-        <li><a href="/timesheets">Timesheets</a></li>
-        <li><a href="/employees">Employees</a></li>
-      </ul>
-    </div>
+    <Container maxWidth="sm">
+      <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
+        <Typography variant="h5" gutterBottom>
+          Create New Timesheet
+        </Typography>
+        <Form method="post">
+          <Box display="flex" flexDirection="column" gap={2}>
+            <Select
+              name="employee_id"
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
+              displayEmpty
+              required
+              fullWidth
+            >
+              <MenuItem value="" disabled>
+                Select an Employee
+              </MenuItem>
+              {employees.map((employee: any) => (
+                <MenuItem key={employee.id} value={employee.id}>
+                  {employee.full_name}
+                </MenuItem>
+              ))}
+            </Select>
+
+            <TextField
+              label="Start Time"
+              type="datetime-local"
+              name="start_time"
+              InputLabelProps={{ shrink: true }}
+              required
+              fullWidth
+            />
+
+            <TextField
+              label="End Time"
+              type="datetime-local"
+              name="end_time"
+              InputLabelProps={{ shrink: true }}
+              required
+              fullWidth
+            />
+
+            <Button type="submit" variant="contained" color="primary">
+              Create Timesheet
+            </Button>
+          </Box>
+        </Form>
+      </Paper>
+
+      <Box mt={2} display="flex" gap={2}>
+        <Button variant="outlined" href="/timesheets">
+          Timesheets
+        </Button>
+        <Button variant="outlined" href="/employees">
+          Employees
+        </Button>
+      </Box>
+    </Container>
   );
 }

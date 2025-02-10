@@ -1,9 +1,8 @@
-import { useLoaderData } from "react-router";
-import { useState } from "react";
+import { useLoaderData, Link } from "react-router";
+import { useState, useEffect, useMemo } from "react";
 import { getDB } from "~/db/getDB";
 import {
   Box,
-  Button,
   Container,
   Paper,
   Table,
@@ -13,72 +12,206 @@ import {
   TableHead,
   TableRow,
   Typography,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Pagination,
+  TextField,
+  Switch,
+  FormControlLabel,
+  Button,
 } from "@mui/material";
 
-export async function loader() {
-  const db = await getDB();
-  const timesheetsAndEmployees = await db.all(
-    "SELECT timesheets.*, employees.full_name, employees.id AS employee_id FROM timesheets JOIN employees ON timesheets.employee_id = employees.id"
-  );
+// Import Schedule-X components
+import { useCalendarApp, ScheduleXCalendar } from "@schedule-x/react";
+import {
+  createViewDay,
+  createViewMonthAgenda,
+  createViewMonthGrid,
+  createViewWeek,
+} from "@schedule-x/calendar";
+import { createEventsServicePlugin } from "@schedule-x/events-service";
+import "@schedule-x/theme-default/dist/index.css";
 
-  return { timesheetsAndEmployees };
+// Type Definitions
+type Timesheet = {
+  id: number;
+  start_time: string;
+  end_time: string;
+  summary: string | null;
+  full_name: string;
+  employee_id: number;
+};
+
+// Utility function to format date for Schedule-X (YYYY-MM-DD HH:mm)
+const formatScheduleXDate = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(
+    date.getMinutes()
+  ).padStart(2, "0")}`;
+};
+
+export async function loader() {
+  try {
+    const db = await getDB();
+    const timesheets: Timesheet[] = await db.all(`
+      SELECT timesheets.id, timesheets.start_time, timesheets.end_time, timesheets.summary,
+             employees.full_name, employees.id AS employee_id
+      FROM timesheets
+      JOIN employees ON timesheets.employee_id = employees.id
+      ORDER BY timesheets.start_time DESC
+    `);
+    return { timesheets };
+  } catch (error) {
+    console.error("Loader Error:", error);
+    throw new Response("Failed to load timesheets.", { status: 500 });
+  }
 }
 
 export default function TimesheetsPage() {
-  const { timesheetsAndEmployees } = useLoaderData();
+  const { timesheets } = useLoaderData() as { timesheets: Timesheet[] };
   const [isTableView, setIsTableView] = useState(true);
+  const [search, setSearch] = useState("");
+  const [selectedEmployee, setSelectedEmployee] = useState<number | "">("");
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 5;
+  const [hydrated, setHydrated] = useState(false);
+
+  // Initialize Events Service Plugin
+  const eventsService = useMemo(() => createEventsServicePlugin(), []);
+
+  // Ensure component only renders when hydrated
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  // Filtered timesheets (used for both table and calendar views)
+  const filteredTimesheets = useMemo(
+    () =>
+      timesheets.filter(
+        (t) =>
+          t.full_name.toLowerCase().includes(search.toLowerCase()) &&
+          (selectedEmployee ? t.employee_id === Number(selectedEmployee) : true) &&
+          new Date(t.start_time) < new Date(t.end_time)
+      ),
+    [timesheets, search, selectedEmployee]
+  );
+
+  const filteredEvents = useMemo(
+    () =>
+      filteredTimesheets.map((t) => ({
+        id: t.id.toString(),
+        title: `${t.full_name} - ${t.summary || "No Summary"}`,
+        start: formatScheduleXDate(t.start_time),
+        end: formatScheduleXDate(t.end_time),
+      })),
+    [filteredTimesheets]
+  );
+
+  const calendar = useCalendarApp({
+    views: [createViewDay(), createViewWeek(), createViewMonthGrid(), createViewMonthAgenda()],
+    plugins: [eventsService],
+    events: filteredEvents,
+  });
+
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredTimesheets.length / rowsPerPage);
+  const paginatedTimesheets = filteredTimesheets.slice(
+    (page - 1) * rowsPerPage,
+    page * rowsPerPage
+  );
+
+  if (!hydrated) return null; // Prevents SSR mismatches
 
   return (
     <Container maxWidth="md">
-      <Paper elevation={3} sx={{ p: 3, mt: 4 }}>
+      <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
         <Typography variant="h5" gutterBottom>
           Timesheets
         </Typography>
 
+        {/* Search & Filtering */}
         <Box display="flex" gap={2} mb={2}>
-          <Button
-            variant={isTableView ? "contained" : "outlined"}
-            onClick={() => setIsTableView(true)}
-          >
-            Table View
-          </Button>
-          <Button
-            variant={!isTableView ? "contained" : "outlined"}
-            onClick={() => setIsTableView(false)}
-          >
-            Calendar View
-          </Button>
+          <TextField
+            label="Search Employee"
+            variant="outlined"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            fullWidth
+          />
+          <FormControl sx={{ minWidth: 150 }}>
+            <InputLabel>Filter by Employee</InputLabel>
+            <Select
+              value={selectedEmployee}
+              onChange={(e) => setSelectedEmployee(e.target.value === "" ? "" : Number(e.target.value))}
+            >
+              <MenuItem value="">All</MenuItem>
+              {Array.from(new Map(timesheets.map((t) => [t.employee_id, t.full_name]))).map(([id, name]) => (
+                <MenuItem key={id} value={id}>
+                  {name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
 
+        {/* Toggle Table/Calendar View */}
+        <FormControlLabel
+          control={
+            <Switch
+              checked={isTableView}
+              onChange={() => setIsTableView(!isTableView)}
+              color="primary"
+            />
+          }
+          label={isTableView ? "Table View" : "Calendar View"}
+          sx={{ mb: 2 }}
+        />
+
+        {/* Table View */}
         {isTableView ? (
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>ID</TableCell>
                   <TableCell>Employee</TableCell>
+                  <TableCell>Summary</TableCell>
                   <TableCell>Start Time</TableCell>
                   <TableCell>End Time</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {timesheetsAndEmployees.map((timesheet: any) => (
-                  <TableRow key={timesheet.id}>
-                    <TableCell>{timesheet.id}</TableCell>
-                    <TableCell>{timesheet.full_name} (ID: {timesheet.employee_id})</TableCell>
-                    <TableCell>{timesheet.start_time}</TableCell>
-                    <TableCell>{timesheet.end_time}</TableCell>
+                {paginatedTimesheets.map((timesheet) => (
+                  <TableRow key={timesheet.id} sx={{ cursor: "pointer" }}>
+                    <TableCell>
+                      <Link to={`/timesheets/${timesheet.id}`} style={{ textDecoration: "none" }}>
+                        {timesheet.full_name}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{timesheet.summary || "No Summary"}</TableCell>
+                    <TableCell>{formatScheduleXDate(timesheet.start_time)}</TableCell>
+                    <TableCell>{formatScheduleXDate(timesheet.end_time)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
         ) : (
-          <Typography variant="body1" sx={{ mt: 2 }}>
-            To implement, see <a href="https://schedule-x.dev/docs/frameworks/react">Schedule X React documentation</a>.
-          </Typography>
+          // Calendar View using Schedule-X
+          <ScheduleXCalendar calendarApp={calendar} />
         )}
 
+        {/* Pagination Controls */}
+        {isTableView && (
+          <Box mt={2} display="flex" justifyContent="center">
+            <Pagination count={totalPages} page={page} onChange={(_, newPage) => setPage(newPage)} color="primary" />
+          </Box>
+        )}
+
+        {/* Navigation Buttons */}
         <Box mt={2} display="flex" gap={2}>
           <Button variant="contained" href="/timesheets/new">
             New Timesheet

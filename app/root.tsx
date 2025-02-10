@@ -10,6 +10,8 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
+import createCache from "@emotion/cache";
+import { CacheProvider } from "@emotion/react";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -45,11 +47,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
 const theme = createTheme();
 
 export default function App() {
+  const cache = createCache({ key: "mui", prepend: true });
+
+
   return (
+    <CacheProvider value={cache}>
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Outlet />
     </ThemeProvider>
+    </CacheProvider>
   );
 }
 

@@ -1,29 +1,203 @@
-import { Container, Paper, Typography, Box, Button } from "@mui/material";
+import { useLoaderData, Form, redirect } from "react-router";
+import { getDB } from "~/db/getDB";
+import {
+  Box,
+  Button,
+  Container,
+  Grid,
+  Paper,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { useNavigate, useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 
-export async function loader() {
-  return {}
+export async function loader({ params }: { params: { employeeId: string } }) {
+  const db = await getDB();
+  const employee = await db.get("SELECT * FROM employees WHERE id = ?", [
+    params.employeeId,
+  ]);
+
+  if (!employee) {
+    throw new Response("Employee not found", { status: 404 });
+  }
+
+  return { employee };
 }
 
-export default function EmployeePage() {
-  return (
-    <Container maxWidth="sm">
-      <Paper elevation={3} sx={{ p: 4, mt: 4, textAlign: "center" }}>
-        <Typography variant="h5" gutterBottom>
-          To implement
-        </Typography>
+export const action = async ({ request, params }: any) => {
+  const formData = await request.formData();
+  const full_name = formData.get("full_name") as string;
+  const email = formData.get("email") as string;
+  const phone = formData.get("phone") as string;
+  const date_of_birth = formData.get("date_of_birth") as string | null;
+  const job_title = formData.get("job_title") as string;
+  const department = formData.get("department") as string;
+  const salary = formData.get("salary") as string;
+  const start_date = formData.get("start_date") as string;
+  const end_date = formData.get("end_date") as string | null;
 
-        <Box mt={3} display="flex" flexDirection="column" gap={2}>
-          <Button variant="contained" href="/employees">
-            Employees
-          </Button>
-          <Button variant="outlined" href="/employees/new">
-            New Employee
-          </Button>
-          <Button variant="outlined" href="/timesheets/">
-            Timesheets
-          </Button>
-        </Box>
-      </Paper>
-    </Container>
+  if (!date_of_birth) {
+    throw new Response("Date of birth is required.", { status: 400 });
+  }
+
+  const birthDate = new Date(date_of_birth);
+  if (isNaN(birthDate.getTime())) {
+    throw new Response("Invalid date format.", { status: 400 });
+  }
+
+  // Ensure Employee is at least 18 years old
+  const today = new Date();
+  const age = today.getFullYear() - birthDate.getFullYear();
+  if (age < 18) {
+    throw new Response("Employee must be at least 18 years old.", { status: 400 });
+  }
+
+  const db = await getDB();
+  await db.run(
+    "UPDATE employees SET full_name = ?, email = ?, phone = ?, date_of_birth = ?, job_title = ?, department = ?, salary = ?, start_date = ?, end_date = ? WHERE id = ?",
+    [
+      full_name,
+      email,
+      phone,
+      date_of_birth,
+      job_title,
+      department,
+      salary,
+      start_date,
+      end_date,
+      params.employeeId,
+    ]
+  );
+
+  return redirect("/employees");
+};
+
+export default function EditEmployeePage() {
+  const { employee } = useLoaderData();
+  const navigate = useNavigate();
+
+  // Ensure the component only renders when employee data is available
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  if (!hydrated) return null; // Prevents hydration mismatch
+
+  return (
+      <Container maxWidth="md">
+        <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
+          <Typography variant="h5" gutterBottom>
+            Edit Employee
+          </Typography>
+
+          <Form method="post">
+            <Grid container spacing={2}>
+              {/* Personal Fields */}
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Full Name"
+                  name="full_name"
+                  defaultValue={employee?.full_name || ""}
+                  required
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Email"
+                  name="email"
+                  type="email"
+                  defaultValue={employee?.email || ""}
+                  required
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Phone"
+                  name="phone"
+                  type="tel"
+                  defaultValue={employee?.phone || ""}
+                  required
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Date of Birth"
+                  name="date_of_birth"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  defaultValue={employee?.date_of_birth || ""}
+                  required
+                  fullWidth
+                />
+              </Grid>
+
+              {/* Professional Fields */}
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Job Title"
+                  name="job_title"
+                  defaultValue={employee?.job_title || ""}
+                  required
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Department"
+                  name="department"
+                  defaultValue={employee?.department || ""}
+                  required
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Salary"
+                  name="salary"
+                  type="number"
+                  defaultValue={employee?.salary || ""}
+                  required
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Start Date"
+                  name="start_date"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  defaultValue={employee?.start_date || ""}
+                  required
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="End Date"
+                  name="end_date"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  defaultValue={employee?.end_date || ""}
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
+
+            <Box mt={3} display="flex" gap={2}>
+              <Button type="submit" variant="contained" color="primary">
+                Update Employee
+              </Button>
+              <Button variant="outlined" onClick={() => navigate("/employees")}>
+                Employees
+              </Button>
+            </Box>
+          </Form>
+        </Paper>
+      </Container>
   );
 }

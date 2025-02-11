@@ -22,27 +22,11 @@ import {
   FormControlLabel,
   Button,
 } from "@mui/material";
-
-// Import Schedule-X components
 import { useCalendarApp, ScheduleXCalendar } from "@schedule-x/react";
-import {
-  createViewDay,
-  createViewMonthAgenda,
-  createViewMonthGrid,
-  createViewWeek,
-} from "@schedule-x/calendar";
+import { createCalendar, createViewDay, createViewMonthAgenda, createViewMonthGrid, createViewWeek} from "@schedule-x/calendar";
 import { createEventsServicePlugin } from "@schedule-x/events-service";
 import "@schedule-x/theme-default/dist/index.css";
-
-// Type Definitions
-type Timesheet = {
-  id: number;
-  start_time: string;
-  end_time: string;
-  summary: string | null;
-  full_name: string;
-  employee_id: number;
-};
+import type { TimesheetData } from '~/components/TimesheetForm';
 
 // Utility function to format date for Schedule-X (YYYY-MM-DD HH:mm)
 const formatScheduleXDate = (dateStr: string) => {
@@ -57,7 +41,7 @@ const formatScheduleXDate = (dateStr: string) => {
 export async function loader() {
   try {
     const db = await getDB();
-    const timesheets: Timesheet[] = await db.all(`
+    const timesheets: TimesheetData[] = await db.all(`
       SELECT timesheets.id, timesheets.start_time, timesheets.end_time, timesheets.summary,
              employees.full_name, employees.id AS employee_id
       FROM timesheets
@@ -72,18 +56,15 @@ export async function loader() {
 }
 
 export default function TimesheetsPage() {
-  const { timesheets } = useLoaderData() as { timesheets: Timesheet[] };
+  const { timesheets } = useLoaderData() as { timesheets: TimesheetData[] };
   const [isTableView, setIsTableView] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState<number | "">("");
   const [page, setPage] = useState(1);
   const rowsPerPage = 5;
   const [hydrated, setHydrated] = useState(false);
+  const [eventsServicePlugin] = useState(() => createEventsServicePlugin());
 
-  // Initialize Events Service Plugin
-  const eventsService = useMemo(() => createEventsServicePlugin(), []);
-
-  // Ensure component only renders when hydrated
   useEffect(() => {
     setHydrated(true);
   }, []);
@@ -110,12 +91,18 @@ export default function TimesheetsPage() {
       })),
     [filteredTimesheets]
   );
-
-  const calendar = useCalendarApp({
+  
+  const calendar = createCalendar({
     views: [createViewDay(), createViewWeek(), createViewMonthGrid(), createViewMonthAgenda()],
-    plugins: [eventsService],
-    events: filteredEvents,
+    defaultView: createViewMonthGrid().name,
+    plugins: [eventsServicePlugin],
+    events: filteredEvents
   });
+  
+  useEffect(() => {
+    eventsServicePlugin.set(filteredEvents);
+  }, [filteredEvents, eventsServicePlugin]);  
+
 
   // Pagination Logic
   const totalPages = Math.ceil(filteredTimesheets.length / rowsPerPage);
@@ -124,7 +111,7 @@ export default function TimesheetsPage() {
     page * rowsPerPage
   );
 
-  if (!hydrated) return null; // Prevents SSR mismatches
+  if (!hydrated) return null; 
 
   return (
     <Container maxWidth="md">
@@ -201,7 +188,7 @@ export default function TimesheetsPage() {
           </TableContainer>
         ) : (
           // Calendar View using Schedule-X
-          <ScheduleXCalendar calendarApp={calendar} />
+          <ScheduleXCalendar key={filteredEvents.length} calendarApp={calendar} />
         )}
 
         {/* Pagination Controls */}

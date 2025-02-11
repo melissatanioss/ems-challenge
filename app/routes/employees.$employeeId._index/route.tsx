@@ -1,5 +1,7 @@
 import { useLoaderData, Form, redirect } from "react-router";
 import { getDB } from "~/db/getDB";
+import path from "path";
+import fs from "fs";
 import {
   Box,
   Button,
@@ -11,6 +13,7 @@ import {
 } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
+import EmployeeForm from "~/components/EmployeeForm";
 
 export async function loader({ params }: { params: { employeeId: string } }) {
   const db = await getDB();
@@ -53,9 +56,33 @@ export const action = async ({ request, params }: any) => {
     throw new Response("Employee must be at least 18 years old.", { status: 400 });
   }
 
+  const photo = formData.get("photo") as File;
+  const document = formData.get("document") as File;
+  const uploadDir = path.join(process.cwd(), "uploads");
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  let photoPath = null;
+  let documentPath = null;
+
+  if (photo && photo.size > 0) {
+    const photoFilePath = path.join(uploadDir, `${email}_photo_${Date.now()}_${photo.name}`);
+    const buffer = Buffer.from(await photo.arrayBuffer());
+    fs.writeFileSync(photoFilePath, buffer);
+    photoPath = `/uploads/${path.basename(photoFilePath)}`;
+  }
+
+  if (document && document.size > 0) {
+    const docFilePath = path.join(uploadDir, `${email}_doc_${Date.now()}_${document.name}`);
+    const buffer = Buffer.from(await document.arrayBuffer());
+    fs.writeFileSync(docFilePath, buffer);
+    documentPath = `/uploads/${path.basename(docFilePath)}`;
+  }
+
   const db = await getDB();
   await db.run(
-    "UPDATE employees SET full_name = ?, email = ?, phone = ?, date_of_birth = ?, job_title = ?, department = ?, salary = ?, start_date = ?, end_date = ? WHERE id = ?",
+    "UPDATE employees SET full_name = ?, email = ?, phone = ?, date_of_birth = ?, job_title = ?, department = ?, salary = ?, start_date = ?, end_date = ?, photo_path = COALESCE(?, photo_path), document_path = COALESCE(?, document_path) WHERE id = ?",
     [
       full_name,
       email,
@@ -66,6 +93,8 @@ export const action = async ({ request, params }: any) => {
       salary,
       start_date,
       end_date,
+      photoPath,
+      documentPath,
       params.employeeId,
     ]
   );
@@ -77,126 +106,25 @@ export default function EditEmployeePage() {
   const { employee } = useLoaderData();
   const navigate = useNavigate();
 
-  // Ensure the component only renders when employee data is available
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     setHydrated(true);
   }, []);
 
-  if (!hydrated) return null; // Prevents hydration mismatch
+  if (!hydrated) return null;
 
   return (
       <Container maxWidth="md">
         <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
-          <Typography variant="h5" gutterBottom>
+            <Typography variant="h5" gutterBottom>
             Edit Employee
-          </Typography>
-
-          <Form method="post">
-            <Grid container spacing={2}>
-              {/* Personal Fields */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Full Name"
-                  name="full_name"
-                  defaultValue={employee?.full_name || ""}
-                  required
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Email"
-                  name="email"
-                  type="email"
-                  defaultValue={employee?.email || ""}
-                  required
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Phone"
-                  name="phone"
-                  type="tel"
-                  defaultValue={employee?.phone || ""}
-                  required
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Date of Birth"
-                  name="date_of_birth"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  defaultValue={employee?.date_of_birth || ""}
-                  required
-                  fullWidth
-                />
-              </Grid>
-
-              {/* Professional Fields */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Job Title"
-                  name="job_title"
-                  defaultValue={employee?.job_title || ""}
-                  required
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Department"
-                  name="department"
-                  defaultValue={employee?.department || ""}
-                  required
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Salary"
-                  name="salary"
-                  type="number"
-                  defaultValue={employee?.salary || ""}
-                  required
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Start Date"
-                  name="start_date"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  defaultValue={employee?.start_date || ""}
-                  required
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="End Date"
-                  name="end_date"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  defaultValue={employee?.end_date || ""}
-                  fullWidth
-                />
-              </Grid>
-            </Grid>
-
+            </Typography>
+            <EmployeeForm initialData={employee} submitButtonLabel="Edit Employee" />
             <Box mt={3} display="flex" gap={2}>
-              <Button type="submit" variant="contained" color="primary">
-                Update Employee
-              </Button>
               <Button variant="outlined" onClick={() => navigate("/employees")}>
                 Employees
               </Button>
             </Box>
-          </Form>
         </Paper>
       </Container>
   );

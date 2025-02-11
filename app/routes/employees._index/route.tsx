@@ -118,7 +118,7 @@ export default function EmployeesPage() {
             <TableHead>
               <TableRow>
                 <TableCell>Full Name</TableCell>
-                <TableCell>Phone Number</TableCell>
+                <TableCell>Email</TableCell>
                 <TableCell>Job Title</TableCell>
                 <TableCell>Department</TableCell>
                 <TableCell>Start Date</TableCell>
@@ -132,7 +132,7 @@ export default function EmployeesPage() {
                       {employee.full_name}
                     </Link>
                   </TableCell>
-                  <TableCell>{employee.phone}</TableCell>
+                  <TableCell>{employee.email}</TableCell>
                   <TableCell>{employee.job_title}</TableCell>
                   <TableCell>{employee.department}</TableCell>
                   <TableCell>{employee.start_date}</TableCell>

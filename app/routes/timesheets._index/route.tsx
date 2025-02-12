@@ -1,4 +1,4 @@
-import { useLoaderData, Link } from "react-router";
+import { useLoaderData, Link } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { getDB } from "~/db/getDB";
 import {
@@ -22,7 +22,7 @@ import {
   FormControlLabel,
   Button,
 } from "@mui/material";
-import { useCalendarApp, ScheduleXCalendar } from "@schedule-x/react";
+import { ScheduleXCalendar } from "@schedule-x/react";
 import { createCalendar, createViewDay, createViewMonthAgenda, createViewMonthGrid, createViewWeek} from "@schedule-x/calendar";
 import { createEventsServicePlugin } from "@schedule-x/events-service";
 import "@schedule-x/theme-default/dist/index.css";

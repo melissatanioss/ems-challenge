@@ -1,5 +1,5 @@
 import { getDB } from "~/db/getDB";
-import { redirect } from "react-router";
+import { redirect } from "react-router-dom";
 
 export async function handleTimesheet(request: Request, isUpdate: boolean, timesheetId?: string) {
     try {

@@ -1,5 +1,4 @@
 import path from "path";
-import url from "url";
 import { open } from "sqlite";
 import sqlite3 from "sqlite3";
 import fs from 'fs';

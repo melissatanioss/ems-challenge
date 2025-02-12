@@ -5,13 +5,14 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-} from "react-router";
-
+} from "react-router-dom";
 import type { Route } from "./+types/root";
 import "./app.css";
-import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
+import { StyledEngineProvider } from "@mui/material/styles";
+import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { createStyled } from "@mui/system";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -45,6 +46,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 const theme = createTheme();
+export const styled = createStyled();
 
 export default function App() {
   const cache = createCache({ key: "mui", prepend: true });
@@ -52,10 +54,11 @@ export default function App() {
 
   return (
     <CacheProvider value={cache}>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Outlet />
-    </ThemeProvider>
+      <StyledEngineProvider injectFirst>
+        <ThemeProvider theme={theme}>
+          <Outlet />
+        </ThemeProvider>
+      </StyledEngineProvider>
     </CacheProvider>
   );
 }

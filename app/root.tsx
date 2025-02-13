@@ -49,7 +49,7 @@ const theme = createTheme();
 export const styled = createStyled();
 
 export default function App() {
-  const cache = createCache({ key: "mui", prepend: true });
+  const cache = createCache({ key: "css", prepend: true });
 
 
   return (

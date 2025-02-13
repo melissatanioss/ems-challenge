@@ -1,5 +1,5 @@
 import { TextField, Grid, Typography, Box, Button, Paper, FormControl, InputLabel, Select, MenuItem, Container, Dialog, DialogContent, DialogTitle, DialogContentText, DialogActions } from "@mui/material";
-import { useNavigate, Form, useActionData } from "react-router-dom";
+import { useNavigate, useActionData } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 
 export type TimesheetData = {
@@ -16,6 +16,11 @@ type TimesheetFormProps = {
     defaultValues?: TimesheetData;
     submitLabel: string;
 };
+
+function formatDateTime(datetime?: string): string {
+    if (!datetime) return "";
+    return new Date(datetime).toISOString().slice(0, 16);
+  }
 
 export default function TimesheetForm({ employees, defaultValues, submitLabel }: TimesheetFormProps) {
     const navigate = useNavigate();
@@ -53,11 +58,11 @@ export default function TimesheetForm({ employees, defaultValues, submitLabel }:
                         {errorMessage}
                     </Typography>
                 )}
-                <Form ref={formRef} method="post">
+                <form ref={formRef} method="post">
                     <Box display="flex" flexDirection="column" gap={2}>
                         <FormControl fullWidth required>
                             <InputLabel>Employee</InputLabel>
-                            <Select name="employee_id" defaultValue={defaultValues?.employee_id || ""}>
+                            <Select name="employee_id" defaultValue={defaultValues?.employee_id ?? ""}>
                                 {employees.map((employee) => (
                                     <MenuItem key={employee.id} value={employee.id}>
                                         {employee.full_name}
@@ -71,7 +76,7 @@ export default function TimesheetForm({ employees, defaultValues, submitLabel }:
                             type="datetime-local"
                             name="start_time"
                             InputLabelProps={{ shrink: true }}
-                            defaultValue={defaultValues?.start_time || ""}
+                            defaultValue={formatDateTime(defaultValues?.start_time)}
                             required
                             fullWidth
                         />
@@ -81,7 +86,7 @@ export default function TimesheetForm({ employees, defaultValues, submitLabel }:
                             type="datetime-local"
                             name="end_time"
                             InputLabelProps={{ shrink: true }}
-                            defaultValue={defaultValues?.end_time || ""}
+                            defaultValue={formatDateTime(defaultValues?.end_time)}
                             required
                             fullWidth
                         />
@@ -111,7 +116,7 @@ export default function TimesheetForm({ employees, defaultValues, submitLabel }:
                             </Button>
                         )}
                     </Box>
-                </Form>
+                </form>
             </Paper>
 
             {/* Success Dialog */}

@@ -1,5 +1,5 @@
 import { TextField, Grid, Typography, Box, Button, Container, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Paper } from "@mui/material";
-import { Form, useNavigate, useActionData } from "react-router-dom";
+import { useNavigate, useActionData } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 
 export type EmployeeFormData = {
@@ -67,7 +67,7 @@ export default function EmployeeForm({ initialData }: EmployeeFormProps) {
                         {errorMessage}
                     </Typography>
                 )}
-                <Form method="post" ref={formRef} encType="multipart/form-data">
+                <form method="post" ref={formRef} encType="multipart/form-data">
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}>
                             <TextField label="Full Name" name="full_name" defaultValue={initialData?.full_name || ""} required fullWidth />
@@ -114,7 +114,7 @@ export default function EmployeeForm({ initialData }: EmployeeFormProps) {
                             {submitButtonLabel}
                         </Button>
                     </Box>
-                </Form>
+                </form>
                 <Box mt={3} display="flex" gap={2}>
                     <Button variant="outlined" onClick={() => navigate("/employees")}>
                         Employees

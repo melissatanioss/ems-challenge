@@ -3,6 +3,11 @@ import { getDB } from "~/db/getDB";
 import TimesheetForm from "~/components/TimesheetForm";
 import { handleTimesheet } from "~/utilities/handle_timesheet";
 import type {LoaderFunction, ActionFunction } from "react-router";
+import { useState, useEffect } from "react";
+
+function formatDateTime(datetime: string) {
+  return datetime ? new Date(datetime).toISOString().slice(0, 16) : "";
+}
 
 export const loader: LoaderFunction = async ({ request, params }) => {  
   const db = await getDB();
@@ -21,8 +26,14 @@ export const loader: LoaderFunction = async ({ request, params }) => {
       headers: { "Content-Type": "application/json" },
     });
   }
-  
-  return { timesheet, employees };
+  return {
+    timesheet: {
+      ...timesheet,
+      start_time: formatDateTime(timesheet.start_time),
+      end_time: formatDateTime(timesheet.end_time),
+    },
+    employees,
+  };
 }
 
 export const action: ActionFunction = async ({ request, params }) => {
@@ -30,8 +41,21 @@ export const action: ActionFunction = async ({ request, params }) => {
 };
 
 export default function EditTimesheetPage() {
-  const { timesheet, employees } = useLoaderData();
-
-  return (<TimesheetForm  employees={employees} defaultValues={timesheet} submitLabel="Update Timesheet"/>
+  const { timesheet, employees } = useLoaderData();    
+  const [hydrated, setHydrated] = useState(false);
+  
+      useEffect(() => {
+          setHydrated(true);
+      }, []);
+  
+      if (!hydrated) return null;
+  
+  return (
+    <TimesheetForm 
+      employees={employees} 
+      defaultValues={timesheet || { id: 0, start_time: "", end_time: "", summary: "", full_name: "", employee_id: 0 }}
+      submitLabel="Update Timesheet"
+    />
   );
+  
 }

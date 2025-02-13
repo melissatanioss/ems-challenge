@@ -1,6 +1,6 @@
 import { TextField, Grid, Typography, Box, Button, Paper, FormControl, InputLabel, Select, MenuItem, Container, Dialog, DialogContent, DialogTitle, DialogContentText, DialogActions } from "@mui/material";
-import { useNavigate, Form } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useNavigate, Form, useActionData } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
 
 export type TimesheetData = {
     id: number;
@@ -13,20 +13,34 @@ export type TimesheetData = {
 
 type TimesheetFormProps = {
     employees: { id: string; full_name: string }[];
-    defaultValues?: TimesheetData
-    submitLabel: string
-    error?: string | null
-    success?: string | null
-}
+    defaultValues?: TimesheetData;
+    submitLabel: string;
+};
 
-
-export default function TimesheetForm({ employees, defaultValues, submitLabel, error, success }: TimesheetFormProps) {
+export default function TimesheetForm({ employees, defaultValues, submitLabel }: TimesheetFormProps) {
     const navigate = useNavigate();
-    const [openDialog, setOpenDialog] = useState(!!success);
+    const actionData = useActionData();
+    const formRef = useRef<HTMLFormElement>(null);
+    const [openDialog, setOpenDialog] = useState(false);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     useEffect(() => {
-        if (success) setOpenDialog(true);
-    }, [success]);
+        if (actionData) {
+            if (actionData.success) {
+                setSuccessMessage(actionData.success);
+                setErrorMessage(null);
+                setOpenDialog(true);
+
+                // Reset form only for new timesheets
+                if (!defaultValues) {
+                    formRef.current?.reset();
+                }
+            } else if (actionData.error) {
+                setErrorMessage(actionData.error);
+            }
+        }
+    }, [actionData]);
 
     return (
         <Container maxWidth="md">
@@ -34,21 +48,24 @@ export default function TimesheetForm({ employees, defaultValues, submitLabel, e
                 <Typography variant="h5" gutterBottom>
                     {submitLabel}
                 </Typography>
-                {error && (
+                {errorMessage && (
                     <Typography color="error" sx={{ mb: 2 }}>
-                        {error}
+                        {errorMessage}
                     </Typography>
                 )}
-                <Form method="post" encType="multipart/form-data">
+                <Form ref={formRef} method="post">
                     <Box display="flex" flexDirection="column" gap={2}>
-                        <InputLabel>Employee</InputLabel>
-                        <Select name="employee_id" defaultValue={defaultValues?.employee_id || ""} required>
-                            {employees.map((employee) => (
-                                <MenuItem key={employee.id} value={employee.id}>
-                                    {employee.full_name}
-                                </MenuItem>
-                            ))}
-                        </Select>
+                        <FormControl fullWidth required>
+                            <InputLabel>Employee</InputLabel>
+                            <Select name="employee_id" defaultValue={defaultValues?.employee_id || ""}>
+                                {employees.map((employee) => (
+                                    <MenuItem key={employee.id} value={employee.id}>
+                                        {employee.full_name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
                         <TextField
                             label="Start Time"
                             type="datetime-local"
@@ -57,7 +74,6 @@ export default function TimesheetForm({ employees, defaultValues, submitLabel, e
                             defaultValue={defaultValues?.start_time || ""}
                             required
                             fullWidth
-                            sx={{ mb: 2 }}
                         />
 
                         <TextField
@@ -68,7 +84,6 @@ export default function TimesheetForm({ employees, defaultValues, submitLabel, e
                             defaultValue={defaultValues?.end_time || ""}
                             required
                             fullWidth
-                            sx={{ mb: 2 }}
                         />
 
                         <TextField
@@ -78,40 +93,40 @@ export default function TimesheetForm({ employees, defaultValues, submitLabel, e
                             rows={3}
                             defaultValue={defaultValues?.summary || ""}
                             fullWidth
-                            sx={{ mb: 2 }}
                         />
                     </Box>
-                    <Box display="flex" gap={2}>
+                    <Box display="flex" gap={2} mt={3}>
                         <Button type="submit" variant="contained" color="primary">
                             {submitLabel}
                         </Button>
-
-                        {/* Show this button only in Edit Timesheet */}
-                        {defaultValues?.employee_id && (
+                        <Button variant="outlined" onClick={() => navigate("/timesheets")}>
+                            View Timesheets
+                        </Button>
+                        <Button variant="outlined" onClick={() => navigate("/employees")}>
+                            View Employees
+                        </Button>
+                        {defaultValues && (
                             <Button variant="outlined" onClick={() => navigate(`/employees/${defaultValues.employee_id}`)}>
                                 Current Employee
                             </Button>
                         )}
-
-                        <Button variant="outlined" href="/timesheets">
-                            Timesheets
-                        </Button>
-                        <Button variant="outlined" href="/employees">
-                            Employees
-                        </Button>
                     </Box>
                 </Form>
             </Paper>
-            
+
             {/* Success Dialog */}
             <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-                <DialogTitle>Timesheet Created</DialogTitle>
+                <DialogTitle>Timesheet {defaultValues ? "Updated" : "Created"}</DialogTitle>
                 <DialogContent>
-                    <DialogContentText>{success}</DialogContentText>
+                    <DialogContentText>{successMessage}</DialogContentText>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenDialog(false)}>Close</Button>
-                    <Button href="/timesheets" variant="contained" color="primary">
+                    <Button
+                        onClick={() => navigate("/timesheets")}
+                        variant="contained"
+                        color="primary"
+                    >
                         View Timesheets
                     </Button>
                 </DialogActions>

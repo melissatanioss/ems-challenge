@@ -20,7 +20,7 @@ CREATE TABLE employees (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     full_name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
-    phone TEXT NOT NULL,
+    phone TEXT NOT NULL UNIQUE,
     date_of_birth DATE NOT NULL,
     job_title TEXT NOT NULL,
     department TEXT NOT NULL,

@@ -1,6 +1,5 @@
-import { useLoaderData, Form, redirect } from "react-router";
+import { useLoaderData } from "react-router";
 import { getDB } from "~/db/getDB";
-import { useState, useEffect } from "react";
 import TimesheetForm from "~/components/TimesheetForm";
 import { handleTimesheet } from "~/utilities/handle_timesheet";
 import type {LoaderFunction, ActionFunction } from "react-router";
@@ -16,11 +15,14 @@ export const loader: LoaderFunction = async ({ request, params }) => {
     [params.timesheetId]
   );
 
-  const url = new URL(request.url);
-  const error = url.searchParams.get("error");
-  const success = url.searchParams.get("success");
-
-  return { timesheet, employees, error, success };
+  if (!timesheet) {
+    throw new Response(JSON.stringify({ error: "Timesheet not found." }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  
+  return { timesheet, employees };
 }
 
 export const action: ActionFunction = async ({ request, params }) => {
@@ -29,13 +31,6 @@ export const action: ActionFunction = async ({ request, params }) => {
 
 export default function EditTimesheetPage() {
   const { timesheet, employees } = useLoaderData();
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
-
-  if (!hydrated) return null; 
 
   return (<TimesheetForm  employees={employees} defaultValues={timesheet} submitLabel="Update Timesheet"/>
   );
